@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>健行徑地圖</title>
+    <title>香港遠足徑 (HK Gov Open Data)</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <style>
@@ -21,6 +21,30 @@
             display: none;
             font-size: 1.2em;
             text-align: center;
+        }
+
+        .card-container {
+            display: flex; /* Use flexbox for layout */
+            flex-direction: column; /* Default to column layout */
+        }
+
+        .card {
+            width: 33%; /* Default width for cards */
+            border-left: solid;
+            border-left-color: #86f0c2;
+            border-radius: 5px;
+            margin: 5px; /* Add some margin between cards */
+        }
+
+        @media (max-width: 500px) {
+            .card-container {
+                flex-direction: row; /* Change to row layout for smaller screens */
+                flex-wrap: wrap; /* Allow cards to wrap into new rows */
+            }
+
+            .card {
+                width: 100%; /* Cards should take full width on small screens */
+            }
         }
     </style>
 </head>
@@ -96,24 +120,15 @@
                 const finishMarker = L.marker(finishCoords).addTo(map)
                     .bindPopup(`<strong>${feature.properties.Finishpt_E}</strong><br/>${feature.properties.Finishpt_C}`);
 
-
                 // 顯示徑道資訊
                 const infoDiv = document.getElementById('info');
                 infoDiv.innerHTML = `
-                    <style>
-                        .card {
-                            width: 33%;
-                            border-left: solid;
-                            border-left-color: #86f0c2;
-                            border-radius: 5px;
-                        }
-                    </style>
                     <h3 class="mx-3">
                         <strong>${feature.properties.Trail_name_Ch}</strong><br/>
                         ${feature.properties.Trail_name_En}
                     </h3>
                     <hr/>
-                    <div class="d-flex flex-row mx-3">
+                    <div class="card-container d-flex flex-row mx-3"> <!-- Updated to use 'card-container' -->
                         <div class="card">
                             <div class="card-body">
                                 <h5 class="card-title">類型</h5>
