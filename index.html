@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>健行徑地圖</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        #map {
+            height: 600px;
+        }
+
+        .loading {
+            display: none;
+            font-size: 1.2em;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12 bg-light p-4">
+                <h2 class="text-center">香港遠足徑 (HK Gov Open Data)</h2>
+                <select id="trailSelect" class="form-control mb-3" disabled>
+                    <option selected>=== 請選擇 ===</option>
+                </select>
+                <div id="info" class="mb-3"></div>
+                <div class="loading" id="loading">正在加載徑道...</div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-12 mb-4">
+                <div id="map"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <script>
+        // 初始化地圖
+        const map = L.map('map').setView([22.3764, 114.1742], 11);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+        }).addTo(map);
+
+        async function fetchData() {
+            const response = await fetch('https://portal.csdi.gov.hk/server/services/common/afcd_rcd_1665568199103_4360/MapServer/WFSServer?service=wfs&request=GetFeature&typenames=Hiking_Trails&outputFormat=geojson&maxFeatures=1000');
+            return response.json();
+        }
+
+        function populateSelect(features) {
+            const select = document.getElementById('trailSelect');
+            features.forEach((feature, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = feature.properties.Trail_name_Ch;
+                select.appendChild(option);
+            });
+            document.querySelector("#trailSelect").disabled = false;
+        }
+
+        function displayTrail(index, features) {
+            const feature = features[index];
+            if (feature) {
+                // 清除之前的徑道
+                map.eachLayer(layer => {
+                    if (layer instanceof L.Polyline) {
+                        map.removeLayer(layer);
+                    }
+                });
+
+                const coords = feature.geometry.coordinates[0];
+                const trailLine = L.polyline(coords.map(coord => [coord[1], coord[0]])).addTo(map);
+
+                // 添加起點標記
+                const startCoords = feature.geometry.coordinates[0].slice(-1)[0].toReversed();
+                const startMarker = L.marker(startCoords).addTo(map)
+                    .bindPopup(`<strong>${feature.properties.Startpt_En}</strong><br/>${feature.properties.Startpt_Ch}`)
+                    .openPopup();
+
+                // 添加終點標記
+                const finishCoords = feature.geometry.coordinates[0][0].toReversed();
+                const finishMarker = L.marker(finishCoords).addTo(map)
+                    .bindPopup(`<strong>${feature.properties.Finishpt_E}</strong><br/>${feature.properties.Finishpt_C}`);
+
+
+                // 顯示徑道資訊
+                const infoDiv = document.getElementById('info');
+                infoDiv.innerHTML = `
+                    <style>
+                        .card {
+                            width: 33%;
+                            border-left: solid;
+                            border-left-color: #86f0c2;
+                            border-radius: 5px;
+                        }
+                    </style>
+                    <h3 class="mx-3">
+                        <strong>${feature.properties.Trail_name_Ch}</strong><br/>
+                        ${feature.properties.Trail_name_En}
+                    </h3>
+                    <hr/>
+                    <div class="d-flex flex-row mx-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">類型</h5>
+                                <p class="card-text">
+                                    <strong>${feature.properties.Type_En}</strong> (${feature.properties.Type_Ch})
+                                </p>
+                                <h5 class="card-title">難度</h5>
+                                <p class="card-text">
+                                    <strong>${feature.properties.Difficult_En}</strong> (${feature.properties.Difficult_Ch})
+                                </p>
+                            </div>
+                        </div>
+                        <div class="card mx-3">
+                            <div class="card-body">
+                                <h5 class="card-title">地區</h5>
+                                <p class="card-text">
+                                    <strong>${feature.properties.Region_En}</strong> (${feature.properties.Region_Ch})
+                                </p>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">起點</h5>
+                                <p class="card-text">
+                                    <strong>${feature.properties.Startpt_En}</strong> (${feature.properties.Startpt_Ch})
+                                </p>
+                                <h5 class="card-title">終點</h5>
+                                <p class="card-text">
+                                    <strong>${feature.properties.Finishpt_E}</strong> (${feature.properties.Finishpt_C})
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // 使地圖聚焦於徑道
+                map.fitBounds(trailLine.getBounds());
+            }
+        }
+
+        document.getElementById('trailSelect').addEventListener('change', (event) => {
+            const selectedIndex = event.target.value;
+            displayTrail(selectedIndex, features);
+        });
+
+        let features;
+
+        // 獲取和加載徑道數據
+        fetchData().then(data => {
+            features = data.features;
+            populateSelect(features);
+            // displayTrail(0, features); // 默認顯示第一條徑道
+        }).catch(error => {
+            console.error('獲取數據時出錯:', error);
+        }).finally(() => {
+            document.getElementById('loading').style.display = 'none';
+        });
+    </script>
+</body>
+
+</html>
