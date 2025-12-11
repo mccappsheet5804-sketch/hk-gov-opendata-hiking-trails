@@ -23,27 +23,10 @@
             text-align: center;
         }
 
-        .card-container {
-            display: flex; /* Use flexbox for layout */
-            flex-direction: column; /* Default to column layout */
-        }
-
-        .card {
-            width: 33%; /* Default width for cards */
-            border-left: solid;
-            border-left-color: #86f0c2;
-            border-radius: 5px;
-            margin: 5px; /* Add some margin between cards */
-        }
-
         @media (max-width: 500px) {
-            .card-container {
-                flex-direction: row; /* Change to row layout for smaller screens */
-                flex-wrap: wrap; /* Allow cards to wrap into new rows */
-            }
-
             .card {
-                width: 100%; /* Cards should take full width on small screens */
+                width: 100%; /* Let cards take full width */
+                margin-bottom: 10px; /* Add some spacing between cards */
             }
         }
     </style>
@@ -74,7 +57,7 @@
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 
     <script>
-        // 初始化地圖
+        // Initialize the map
         const map = L.map('map').setView([22.3764, 114.1742], 11);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
@@ -93,13 +76,13 @@
                 option.textContent = feature.properties.Trail_name_Ch;
                 select.appendChild(option);
             });
-            document.querySelector("#trailSelect").disabled = false;
+            select.disabled = false; // Enable the select dropdown
         }
 
         function displayTrail(index, features) {
             const feature = features[index];
             if (feature) {
-                // 清除之前的徑道
+                // Clear previous trail
                 map.eachLayer(layer => {
                     if (layer instanceof L.Polyline) {
                         map.removeLayer(layer);
@@ -109,18 +92,20 @@
                 const coords = feature.geometry.coordinates[0];
                 const trailLine = L.polyline(coords.map(coord => [coord[1], coord[0]])).addTo(map);
 
-                // 添加起點標記
-                const startCoords = feature.geometry.coordinates[0].slice(-1)[0].toReversed();
-                const startMarker = L.marker(startCoords).addTo(map)
+                // Adding markers for start and finish points
+                const startCoords = feature.geometry.coordinates[0][0].reverse();
+                const finishCoords = feature.geometry.coordinates[0].slice(-1)[0].reverse();
+
+                L.marker(startCoords)
+                    .addTo(map)
                     .bindPopup(`<strong>${feature.properties.Startpt_En}</strong><br/>${feature.properties.Startpt_Ch}`)
                     .openPopup();
 
-                // 添加終點標記
-                const finishCoords = feature.geometry.coordinates[0][0].toReversed();
-                const finishMarker = L.marker(finishCoords).addTo(map)
+                L.marker(finishCoords)
+                    .addTo(map)
                     .bindPopup(`<strong>${feature.properties.Finishpt_E}</strong><br/>${feature.properties.Finishpt_C}`);
 
-                // 顯示徑道資訊
+                // Display trail information
                 const infoDiv = document.getElementById('info');
                 infoDiv.innerHTML = `
                     <h3 class="mx-3">
@@ -128,8 +113,8 @@
                         ${feature.properties.Trail_name_En}
                     </h3>
                     <hr/>
-                    <div class="card-container d-flex flex-row mx-3"> <!-- Updated to use 'card-container' -->
-                        <div class="card">
+                    <div class="d-flex flex-column flex-md-row mx-3">
+                        <div class="card flex-fill mb-3">
                             <div class="card-body">
                                 <h5 class="card-title">類型</h5>
                                 <p class="card-text">
@@ -141,7 +126,7 @@
                                 </p>
                             </div>
                         </div>
-                        <div class="card mx-3">
+                        <div class="card flex-fill mb-3 mx-md-3">
                             <div class="card-body">
                                 <h5 class="card-title">地區</h5>
                                 <p class="card-text">
@@ -149,7 +134,7 @@
                                 </p>
                             </div>
                         </div>
-                        <div class="card">
+                        <div class="card flex-fill mb-3">
                             <div class="card-body">
                                 <h5 class="card-title">起點</h5>
                                 <p class="card-text">
@@ -164,7 +149,7 @@
                     </div>
                 `;
 
-                // 使地圖聚焦於徑道
+                // Fit the map to the trail bounds
                 map.fitBounds(trailLine.getBounds());
             }
         }
@@ -176,11 +161,10 @@
 
         let features;
 
-        // 獲取和加載徑道數據
+        // Fetch and load trail data
         fetchData().then(data => {
             features = data.features;
             populateSelect(features);
-            // displayTrail(0, features); // 默認顯示第一條徑道
         }).catch(error => {
             console.error('獲取數據時出錯:', error);
         }).finally(() => {
